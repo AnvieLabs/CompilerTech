@@ -20,3 +20,18 @@ I want to implement something that is all of the following to the highest extent
 My main goal is only experiment with my ideas using this, write my own analysis tools, write compiler,
 use compiler tech in normal programs, etc... This does not mean, I want this project to be an experiment,
 I want this production ready, to be available to be used anywhere, where any modern language is used.
+
+## Building
+
+There is one bootstrap step, that is to be exectued only once at the very beginning,
+and then everytime the executable "Start" is ran, it'll rebuild itself and use the latest
+build then to build the actual project everytime. The name "Start" is not arbitrary, you must
+always and only use that name for the binary to build project.
+
+```
+# bootstrap
+gcc -O3 -o Start BuildCommands.c && ./Start
+
+# any following builds
+./Start
+```
