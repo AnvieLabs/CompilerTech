@@ -24,14 +24,14 @@ I want this production ready, to be available to be used anywhere, where any mod
 ## Building
 
 There is one bootstrap step, that is to be exectued only once at the very beginning,
-and then everytime the executable "Start" is ran, it'll rebuild itself and use the latest
-build then to build the actual project everytime. The name "Start" is not arbitrary, you must
+and then everytime the executable "Make" is ran, it'll rebuild itself and use the latest
+build then to build the actual project everytime. The name "Make" is not arbitrary, you must
 always and only use that name for the binary to build project.
 
 ```
 # bootstrap
-gcc -O3 -o Start BuildCommands.c && ./Start
+gcc -O3 -o Make BuildCommands.c && ./Make
 
 # any following builds
-./Start
+./Make
 ```
