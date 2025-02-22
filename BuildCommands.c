@@ -13,5 +13,6 @@ SELF_START ({
         FLAGS ("-ggdb", "-fPIC")
     );
 
-    ADD_EXECUTABLE ("scc", SOURCES ("Main.c"), LIBRARIES ("ctStd"), FLAGS ("-ggdb", "-fPIC"));
+    // Modern C Compiler
+    ADD_EXECUTABLE ("mcc", SOURCES ("Main.c"), LIBRARIES ("ctStd"), FLAGS ("-ggdb", "-fPIC"));
 });
