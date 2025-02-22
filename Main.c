@@ -58,6 +58,14 @@ typedef struct McParser {
     char* read_pos;
 } McParser;
 
+///
+/// Deinitialize McParser object after using.
+///
+/// mcp[out] : Reference to McParser object to be deinitialized.
+///
+/// SUCCESS : `mcp`
+/// FAILURE : `NULL`
+///
 static McParser* McParserDeinit (McParser* mcp) {
     if (!mcp) {
         LOG_ERROR ("invalid arguments.");
@@ -70,13 +78,38 @@ static McParser* McParserDeinit (McParser* mcp) {
     return mcp;
 }
 
-static McParser* McParserInit (McParser* mcp) {
-    if (!mcp) {
+///
+/// Initialize a new Modern C Parser object to help read and parse file
+/// with given name `src_name`.
+///
+/// mcp[out]     : Reference to McParser object to be initialized.
+/// src_name[in] : Name of C source code to load and parse.
+///
+/// SUCCESS : `mcp`
+/// FAILURE : `NULL`
+///
+static McParser* McParserInit (McParser* mcp, const char* src_name) {
+    if (!mcp || !src_name) {
         LOG_ERROR ("invalid arguments.");
         return NULL;
     }
 
-    return McParserDeinit (mcp);
+    memset (mcp, 0, sizeof (McParser));
+
+    if (!ReadCompleteFile (
+            src_name,
+            (void**)&mcp->code.data,
+            &mcp->code.length,
+            &mcp->code.capacity
+        )) {
+        LOG_ERROR ("failed to read complete file \"%s\".", src_name);
+        McParserDeinit (mcp);
+        return NULL;
+    }
+
+    mcp->read_pos = mcp->code.data;
+
+    return mcp;
 }
 
 int main (int argc, char** argv) {
@@ -86,15 +119,12 @@ int main (int argc, char** argv) {
     }
 
     const char* src_name = argv[1];
-    size_t      src_size = GetFileSize (src_name);
 
     McParser parser = {0};
-    ReadCompleteFile (
-        src_name,
-        (void**)&parser.code.data,
-        &parser.code.length,
-        &parser.code.capacity
-    );
+    if (!McParserInit (&parser, src_name)) {
+        LOG_ERROR ("failed to init parser.");
+        return 1;
+    }
 
     McParserDeinit (&parser);
 
