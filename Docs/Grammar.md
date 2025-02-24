@@ -52,18 +52,18 @@ the subset of productions generate is a regular language (something that has a r
         | <hex>
         | <bin>
 
-<expr0> ::= <expr1> "+" <expr>
-          | <expr1> "-" <expr>
+<expr0> ::= <expr1> "+" <expr0>
+          | <expr1> "-" <expr0>
+          | <expr1>
           
-<expr1> ::= <expr2> "*" <expr>
-          | <expr2> "/" <expr>
+<expr1> ::= <expr2> "*" <expr1>
+          | <expr2> "/" <expr1>
+          | <expr2>
 
 <expr2> ::= ["("] <expr> [")"]
+          | <num>
 
 <expr> ::= <expr0>
-         | <expr1>
-         | <expr2>
-         | <num>
 
 <id> ::= [_]{_a-zA-Z0-9}
 
