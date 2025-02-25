@@ -5,8 +5,134 @@
 /// Method definitions to interact with Mc AST node types.
 
 #include <Misra/Mc/Parser/ASTNodeTypes.h>
+#include <Misra/Std/Container/Str.h>
 #include <Misra/Std/File.h>
 #include <Misra/Std/Log.h>
+
+#define IS_DIGIT(c) ('0' <= (c) && (c) <= '9')
+#define IS_UPPER(c) ('A' <= (c) && (c) <= 'Z')
+#define IS_LOWER(c) ('a' <= (c) && (c) <= 'z')
+#define IS_ALPHA(c) (IS_UPPER (c) || IS_LOWER (c))
+#define IS_ALNUM(c) (IS_ALPHA (c) || IS_DIGIT (c))
+
+static inline McType* type_deinit (McType* t) {
+    if (!t) {
+        LOG_ERROR ("invalid arguments.");
+        return NULL;
+    }
+
+    memset (t, 0, sizeof (McType));
+
+    return t;
+}
+
+
+static inline McExpr* expr_create() {
+    return calloc (1, sizeof (McExpr));
+}
+
+
+static inline void expr_destroy (McExpr* e) {
+    if (!e) {
+        LOG_ERROR ("invalid arguments.");
+        return;
+    }
+
+    switch (e->expr_type) {
+        case MC_EXPR_TYPE_ADD :
+        case MC_EXPR_TYPE_SUB :
+        case MC_EXPR_TYPE_MUL :
+        case MC_EXPR_TYPE_DIV :
+        case MC_EXPR_TYPE_AND :
+        case MC_EXPR_TYPE_OR :
+        case MC_EXPR_TYPE_XOR :
+        case MC_EXPR_TYPE_MOD :
+        case MC_EXPR_TYPE_SHR :
+        case MC_EXPR_TYPE_SHL :
+        case MC_EXPR_TYPE_LE :
+        case MC_EXPR_TYPE_GE :
+        case MC_EXPR_TYPE_LT :
+        case MC_EXPR_TYPE_GT :
+        case MC_EXPR_TYPE_EQ :
+        case MC_EXPR_TYPE_NE :
+        case MC_EXPR_TYPE_LOG_AND :
+        case MC_EXPR_TYPE_LOG_OR :
+        case MC_EXPR_TYPE_ASSIGN :
+        case MC_EXPR_TYPE_ADD_ASSIGN :
+        case MC_EXPR_TYPE_SUB_ASSIGN :
+        case MC_EXPR_TYPE_MUL_ASSIGN :
+        case MC_EXPR_TYPE_DIV_ASSIGN :
+        case MC_EXPR_TYPE_MOD_ASSIGN :
+        case MC_EXPR_TYPE_AND_ASSIGN :
+        case MC_EXPR_TYPE_OR_ASSIGN :
+        case MC_EXPR_TYPE_XOR_ASSIGN :
+        case MC_EXPR_TYPE_SHR_ASSIGN :
+        case MC_EXPR_TYPE_SHL_ASSIGN :
+        case MC_EXPR_TYPE_CALL :
+        case MC_EXPR_TYPE_ARR_SUB :
+        case MC_EXPR_TYPE_ACCESS :
+        case MC_EXPR_TYPE_PTR_ACCESS : {
+            expr_destroy (e->add.l);
+            expr_destroy (e->add.r);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+
+
+        case MC_EXPR_TYPE_LOG_NOT :
+        case MC_EXPR_TYPE_NOT :
+        case MC_EXPR_TYPE_UN_PLUS :
+        case MC_EXPR_TYPE_UN_MINUS :
+        case MC_EXPR_TYPE_IN_PARENS :
+        case MC_EXPR_TYPE_ADDR :
+        case MC_EXPR_TYPE_DEREF :
+        case MC_EXPR_TYPE_SIZE_OF :
+        case MC_EXPR_TYPE_ALIGN_OF :
+        case MC_EXPR_TYPE_INC_PFX :
+        case MC_EXPR_TYPE_INC_SFX :
+        case MC_EXPR_TYPE_DEC_PFX :
+        case MC_EXPR_TYPE_DEC_SFX : {
+            expr_destroy (e->not.e);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+
+        case MC_EXPR_TYPE_CAST : {
+            expr_destroy (e->cast.e);
+            type_deinit (&e->cast.type);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+
+        case MC_EXPR_TYPE_TERN : {
+            expr_destroy (e->tern.c);
+            expr_destroy (e->tern.t);
+            expr_destroy (e->tern.f);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+        case MC_EXPR_TYPE_LIST : {
+            VecForeach (&e->list, xpr, { expr_destroy (xpr); });
+            VecDeinit (&e->list);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+        case MC_EXPR_TYPE_ID : {
+            StrDeinit (&e->id);
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+        case MC_EXPR_TYPE_NUM : {
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+        default : {
+            LOG_ERROR ("unreachable code reached : invalid expression type.");
+            memset (e, 0, sizeof (McExpr));
+            return;
+        }
+    }
+}
 
 static inline McType* basic_type_array_init (
     McType*         t,
@@ -262,41 +388,91 @@ static inline void parser_skip_ws (McParser* mcp) {
     }
 }
 
-///
-/// Try to parse a integer.
-///
-/// si[in,out]  : Pointer to a 64-bit signed integer variable to store parsed
-///               integer value into.
-/// mcp[in,out] : McParser object to parse from.
-///
-/// SUCCESS : true, mcp advanced to position after integer.
-/// FAILURE : false, mcp unchanged.
-///
-static inline bool parse_integer (u64* si, McParser* mcp) {
+static inline bool parse_int (u64* si, McParser* mcp) {
     if (!si || !mcp) {
         LOG_ERROR ("invalid arguments");
         return false;
     }
 
     const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
 
     // parse integer
-    u64  val     = 0;
-    bool has_val = false;
-    while (strchr ("0123456789", parser_peek (mcp))) {
+    u64  val = 0;
+    char c   = parser_peek (mcp);
+    while (IS_DIGIT (c)) {
         val = val * 10 + (parser_peek (mcp) - '0');
+
         mcp->read_pos++;
-        has_val = true;
+        c = parser_peek (mcp);
     }
 
-    if (has_val) {
+    if (start_pos != mcp->read_pos) {
         *si = val;
         return true;
     } else {
-        mcp->read_pos = start_pos;
         return false;
     }
 }
+
+
+static inline bool parse_flt (f64* f, McParser* mcp) {
+    if (!f || !mcp) {
+        LOG_ERROR ("invalid arguments");
+        return false;
+    }
+
+    const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
+
+
+    // parse integer
+    f64  val = 0;
+    char c   = parser_peek (mcp);
+    while (IS_DIGIT (c)) {
+        val = val * 10 + (parser_peek (mcp) - '0');
+
+        mcp->read_pos++;
+        c = parser_peek (mcp);
+    }
+
+    parser_skip_ws (mcp);
+
+    if (parser_peek (mcp) != '.') {
+        mcp->read_pos = start_pos;
+        return false;
+    }
+
+    mcp->read_pos++;
+    parser_skip_ws (mcp);
+
+    f64 pow = 10;
+    f64 dec = 0;
+
+    while (IS_DIGIT (c)) {
+        dec = dec + (parser_peek (mcp) - '0') / pow;
+        pow = pow * 10;
+
+        mcp->read_pos++;
+        c = parser_peek (mcp);
+    }
+
+    val = val + dec;
+
+    parser_skip_ws (mcp);
+
+    if (parser_peek (mcp) == 'f') {
+        mcp->read_pos++;
+    }
+
+    if (start_pos != mcp->read_pos) {
+        *f = val;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 
 static inline bool parse_basic_type (McType* t, McParser* mcp) {
     if (!t || !mcp) {
@@ -305,6 +481,7 @@ static inline bool parse_basic_type (McType* t, McParser* mcp) {
     }
 
     const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
 
     bool            is_unsigned = false;
     McBasicTypeKind bt_kind     = MC_BASIC_TYPE_KIND_INVALID;
@@ -333,7 +510,7 @@ static inline bool parse_basic_type (McType* t, McParser* mcp) {
 
     if (bt_kind) {
         u64 nbits = 0;
-        if (parse_integer (&nbits, mcp)) {
+        if (parse_int (&nbits, mcp)) {
             if (basic_type_init (t, bt_kind, MC_TYPE_MOD_NONE, is_unsigned, nbits)) {
                 return true;
             }
@@ -345,9 +522,35 @@ static inline bool parse_basic_type (McType* t, McParser* mcp) {
 }
 
 
+static inline bool parse_id (Str* id, McParser* mcp) {
+    if (!id || !mcp) {
+        LOG_ERROR ("invalid arguments.");
+        return false;
+    }
+
+    const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
+
+    char c = parser_peek (mcp);
+
+    StrInit (id);
+    while (c == '_' || IS_ALPHA (c) || (id->length && IS_DIGIT (c))) {
+        StrPushBack (id, c);
+        mcp->read_pos++;
+        c = parser_peek (mcp);
+    }
+
+    if (!id->length) {
+        return false;
+    }
+
+    return true;
+}
+
+
 static inline bool parse_expr14 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -356,7 +559,7 @@ static inline bool parse_expr14 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr13 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -365,7 +568,7 @@ static inline bool parse_expr13 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr12 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -374,7 +577,7 @@ static inline bool parse_expr12 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr11 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -383,7 +586,7 @@ static inline bool parse_expr11 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr10 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -392,7 +595,7 @@ static inline bool parse_expr10 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr9 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -401,7 +604,7 @@ static inline bool parse_expr9 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr8 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -410,7 +613,7 @@ static inline bool parse_expr8 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr7 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -419,7 +622,7 @@ static inline bool parse_expr7 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr6 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -428,7 +631,7 @@ static inline bool parse_expr6 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr5 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -437,7 +640,7 @@ static inline bool parse_expr5 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr4 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -446,7 +649,7 @@ static inline bool parse_expr4 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr3 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -455,7 +658,7 @@ static inline bool parse_expr3 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr2 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
     return false;
@@ -464,18 +667,74 @@ static inline bool parse_expr2 (McExpr* e, McParser* mcp) {
 
 static inline bool parse_expr1 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
+
     return false;
 }
 
 
 static inline bool parse_expr0 (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
-        LOG_ERROR ("invalid arguments/");
+        LOG_ERROR ("invalid arguments.");
         return false;
     }
+
+    const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
+
+    if (parse_expr1 (e, mcp)) {
+        parser_skip_ws (mcp);
+
+        struct {
+            const char* opnd;
+            u8          opnd_len;
+            McExprType  expr_type;
+        } opnd_type[] = {
+            {  "=", 1,     MC_EXPR_TYPE_ASSIGN},
+            { "+=", 2, MC_EXPR_TYPE_ADD_ASSIGN},
+            { "-=", 2, MC_EXPR_TYPE_SUB_ASSIGN},
+            { "*=", 2, MC_EXPR_TYPE_MUL_ASSIGN},
+            { "/=", 2, MC_EXPR_TYPE_DIV_ASSIGN},
+            { "%=", 2, MC_EXPR_TYPE_MOD_ASSIGN},
+            { "&=", 2, MC_EXPR_TYPE_AND_ASSIGN},
+            { "|=", 2,  MC_EXPR_TYPE_OR_ASSIGN},
+            { "^=", 2, MC_EXPR_TYPE_XOR_ASSIGN},
+            {">>=", 3, MC_EXPR_TYPE_SHR_ASSIGN},
+            {"<<=", 3, MC_EXPR_TYPE_SHL_ASSIGN},
+        };
+        u64 nopnds = sizeof (opnd_type) / sizeof (opnd_type[0]);
+
+        McExpr* r = expr_create();
+
+        for (u64 o = 0; o < nopnds; o++) {
+            if (parser_can_read_n (mcp, opnd_type[o].opnd_len) &&
+                !strncmp (mcp->read_pos, opnd_type[o].opnd, opnd_type[o].opnd_len)) {
+                parser_skip_ws (mcp);
+
+                mcp->read_pos++;
+
+                if (parse_expr1 (r, mcp)) {
+                    parser_skip_ws (mcp);
+
+                    McExpr* l = expr_create();
+                    memcpy (l, e, sizeof (McExpr));
+
+                    e->expr_type = opnd_type[o].expr_type;
+                    e->assign.l  = l;
+                    e->assign.r  = r;
+
+                    return true;
+                }
+            }
+        }
+
+        // a direct pass to expr1
+        expr_destroy (r);
+        return true;
+    }
+
     return false;
 }
 
@@ -484,6 +743,75 @@ static inline bool parse_expr (McExpr* e, McParser* mcp) {
     if (!e || !mcp) {
         LOG_ERROR ("invalid arguments.");
         return false;
+    }
+
+    const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
+
+    Str id = {0};
+    if (parse_id (&e->id, mcp)) {
+        e->expr_type = MC_EXPR_TYPE_ID;
+        return true;
+    }
+
+    if (!(e->num.is_int = !parse_flt (&e->num.f, mcp))) {
+        e->expr_type = MC_EXPR_TYPE_NUM;
+        return true;
+    } else if ((e->num.is_int = parse_int (&e->num.i, mcp))) {
+        e->expr_type = MC_EXPR_TYPE_NUM;
+        return true;
+    }
+
+    // NOTE(brightprogrammer): Passing expr directly here
+    // can this create problems?
+    if (parser_peek (mcp) == '(') {
+        mcp->read_pos++;
+
+        parser_skip_ws (mcp);
+        if (!parse_expr (e, mcp)) {
+            mcp->read_pos = start_pos;
+            return false;
+        }
+        parser_skip_ws (mcp);
+
+        if (parser_peek (mcp) == ')') {
+            mcp->read_pos++;
+        } else {
+            mcp->read_pos = start_pos;
+            return false;
+        }
+
+        return true;
+    }
+
+    if (parse_expr0 (e, mcp)) {
+        parser_skip_ws (mcp);
+
+        // if we get a comma, then this is actually a list expression
+        if (parser_peek (mcp) == ',') {
+            // create a clone of currently parse expr
+            McExpr* ep = expr_create();
+            *ep        = *e;
+
+            // change current expr's type to list
+            e->expr_type = MC_EXPR_TYPE_LIST;
+            VecInit (&e->list, NULL, NULL);
+            VecPushBack (&e->list, &ep);
+
+            while (parser_peek (mcp) == ',') {
+                mcp->read_pos++;
+                parser_skip_ws (mcp);
+
+                // make space for one more expression
+                VecResize (&e->list, e->list.length + 1);
+                VecLast (&e->list) = expr_create();
+
+                parse_expr (VecLast (&e->list), mcp);
+            }
+        } else {
+            // otherwise this was just passed to expr0 directly
+            return true;
+        }
     }
 
     return false;
@@ -496,6 +824,7 @@ bool McParseProgram (McProgram* prog, McParser* mcp) {
     }
 
     const char* start_pos = mcp->read_pos;
+    parser_skip_ws (mcp);
 
     while (parser_can_read_n (mcp, 1)) {
         parser_skip_ws (mcp);

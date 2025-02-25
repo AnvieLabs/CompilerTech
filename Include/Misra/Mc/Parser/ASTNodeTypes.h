@@ -107,6 +107,16 @@ typedef enum McExprType {
     MC_EXPR_TYPE_LOG_AND,
     MC_EXPR_TYPE_LOG_OR,
     MC_EXPR_TYPE_ASSIGN,
+    MC_EXPR_TYPE_ADD_ASSIGN,
+    MC_EXPR_TYPE_SUB_ASSIGN,
+    MC_EXPR_TYPE_MUL_ASSIGN,
+    MC_EXPR_TYPE_DIV_ASSIGN,
+    MC_EXPR_TYPE_MOD_ASSIGN,
+    MC_EXPR_TYPE_AND_ASSIGN,
+    MC_EXPR_TYPE_OR_ASSIGN,
+    MC_EXPR_TYPE_XOR_ASSIGN,
+    MC_EXPR_TYPE_SHR_ASSIGN,
+    MC_EXPR_TYPE_SHL_ASSIGN,
     MC_EXPR_TYPE_CALL,
     MC_EXPR_TYPE_ARR_SUB,
     MC_EXPR_TYPE_ACCESS,
@@ -127,6 +137,8 @@ typedef enum McExprType {
     MC_EXPR_TYPE_CAST,
     MC_EXPR_TYPE_LIST,
     MC_EXPR_TYPE_TERN,
+    MC_EXPR_TYPE_ID,
+    MC_EXPR_TYPE_NUM,
     MC_EXPR_TYPE_MAX
 } McExprType;
 
@@ -147,19 +159,27 @@ struct McExpr {
             inc_sfx, dec_pfx, dec_sfx;
 
         struct {
-            Str     id; // (type)
+            McType  type;
             McExpr* e;
         } cast;
 
-        struct {
-            Vec (McExpr*) l;
-        } list;
+        Vec (McExpr*) list;
 
         struct {
             McExpr* c;
             McExpr* t;
             McExpr* f;
         } tern;
+
+        Str id;
+
+        struct {
+            bool is_int;
+            union {
+                u64 i;
+                f64 f;
+            };
+        } num;
     };
 };
 
