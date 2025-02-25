@@ -111,7 +111,7 @@ Str* StrAppendf (Str* str, const char* fmt, ...) __attribute__ ((format (printf,
 /// SUCCESS : Returns `str` the string itself on success.
 /// FAILURE : Returns `NULL` otherwise.
 ///
-#define StrPushBack(str, chr) VecPushBack(str, ((char[])({chr}))
+#define StrPushBack(str, chr) VecPushBack(str, ((char[]){chr}))
 
 ///
 /// Pop char from string back.
