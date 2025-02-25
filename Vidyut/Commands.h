@@ -130,7 +130,14 @@ static inline const char* CreateObjectFile (
     *(char*)cmd = 0; /* clear */
 
     /* compile and create .o file */
-    cmd = Appendf (cmd, "gcc -o %s/%s.o -c %s -Wl,-rpath=%s", BUILD_TMP_DIR, src_name, src_name, BUILD_LIBRARY_DIR);
+    cmd = Appendf (
+        cmd,
+        "gcc -o %s/%s.o -c %s -Wl,-rpath=%s",
+        BUILD_TMP_DIR,
+        src_name,
+        src_name,
+        BUILD_LIBRARY_DIR
+    );
     cmd = AppendLibrariesAndCompilationFlagsToCommand (cmd, lib_names, comp_flags);
 
     /* execute command */
@@ -140,11 +147,10 @@ static inline const char* CreateObjectFile (
     /* reference https://releases.llvm.org/8.0.1/tools/clang/docs/JSONCompilationDatabase.html */
     ccj = Appendf (
         ccj,
-        "{\"directory\":\"%s/%s\",\"command\":\"%s\",\"file\":\"%s/%s\"},",
+        "{\"directory\":\"%s\",\"command\":\"%s\",\"file\":\"%s/%s\"},",
         getenv ("PWD"),
-        wd,
         cmd,
-        wd,
+        getenv ("PWD"),
         src_name
     );
 
@@ -179,7 +185,13 @@ static inline const char* AddExecutable (
     }
 
     /* start cooking up exec generation command */
-    const char* cmd = Appendf (NULL, "gcc -o %s/%s -Wl,-rpath=%s", BUILD_BINARY_DIR, exec_name, BUILD_LIBRARY_DIR);
+    const char* cmd = Appendf (
+        NULL,
+        "gcc -o %s/%s -Wl,-rpath=%s",
+        BUILD_BINARY_DIR,
+        exec_name,
+        BUILD_LIBRARY_DIR
+    );
 
     /* go through each source file name */
     const char** iter = src_names;

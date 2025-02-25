@@ -16,11 +16,11 @@
 #endif
 
 #ifndef BUILD_ROOT
-#    define BUILD_ROOT "Build"
+#    define BUILD_ROOT "./Build"
 #endif
 
 #ifndef BUILD_TMP_DIR
-#    define BUILD_TMP_DIR "./" BUILD_ROOT PATHSEP "tmp"
+#    define BUILD_TMP_DIR BUILD_ROOT PATHSEP "tmp"
 #endif
 
 #ifndef GLOBAL_INCLUDE_DIRS
@@ -36,11 +36,11 @@
 #endif
 
 #ifndef BUILD_LIBRARY_DIR
-#    define BUILD_LIBRARY_DIR "./" BUILD_ROOT PATHSEP "lib"
+#    define BUILD_LIBRARY_DIR BUILD_ROOT PATHSEP "lib"
 #endif
 
 #ifndef BUILD_ARCHIVE_DIR
-#    define BUILD_ARCHIVE_DIR "./" BUILD_ROOT PATHSEP "lib"
+#    define BUILD_ARCHIVE_DIR BUILD_ROOT PATHSEP "lib"
 #endif
 
 #endif

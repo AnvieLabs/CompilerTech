@@ -1,4 +1,3 @@
-// ct
 #include <Misra/Mc/Parser/ASTNodeTypes.h>
 #include <Misra/Std/Log.h>
 
