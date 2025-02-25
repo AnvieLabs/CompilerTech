@@ -8,9 +8,11 @@
 #define MISRA_STD_LOG_H
 
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+// Misra
+#include <Misra/Types.h>
 
 #define LOG_FATAL(fmt, ...)                                                                        \
     LogWrite (LOG_MESSAGE_TYPE_FATAL, __FUNCTION__, __LINE__, fmt, #__VA_ARGS__)

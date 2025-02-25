@@ -102,42 +102,42 @@ the subset of productions generate is a regular language (something that has a r
           | <expr9> ">=" <expr8>
           | <expr9>
 
-<expr9> ::= <expr20> "<<" <expr9>
-          | <expr20> ">>" <expr9>
-          | <expr20>
+<expr9> ::= <expr10> "<<" <expr9>
+          | <expr10> ">>" <expr9>
+          | <expr10>
 
-<expr20> ::= <expr21> "+" <expr20>
-          | <expr21> "-" <expr20>
-          | <expr21>
+<expr10> ::= <expr11> "+" <expr10>
+           | <expr11> "-" <expr10>
+           | <expr11>
           
-<expr21> ::= <expr22> "*" <expr21>
-           | <expr22> "/" <expr21>
-           | <expr22> "%" <expr21>
-           | <expr22>
+<expr11> ::= <expr12> "*" <expr11>
+           | <expr12> "/" <expr11>
+           | <expr12> "%" <expr11>
+           | <expr12>
 
-<expr22> ::= "++" <expr22>
-           | "--" <expr22>
-           | "+" <expr22>
-           | "-" <expr22>
-           | "!" <expr22>
-           | "~" <expr22>
-           | "(" <type> ")"  <expr22>
-           | "*" <expr22>
-           | "&" <expr22>
-           | "sizeof" <expr22>
-           | "_Alignof" <expr22>
-           | <expr23>
+<expr12> ::= "++" <expr12>
+           | "--" <expr12>
+           | "+" <expr12>
+           | "-" <expr12>
+           | "!" <expr12>
+           | "~" <expr12>
+           | "(" <type> ")"  <expr12>
+           | "*" <expr12>
+           | "&" <expr12>
+           | "sizeof" <expr12>
+           | "_Alignof" <expr12>
+           | <expr13>
 
-<expr23> ::= <expr23> "++" 
-           | <expr23> "--" 
-           | <expr23> "(" <expr> ")" 
-           | <expr23> "[" <expr> "]" 
-           | <expr23> "." <expr> 
-           | <expr23> "->" <expr>
+<expr13> ::= <expr13> "++" 
+           | <expr13> "--" 
+           | <expr13> "(" <expr> ")" 
+           | <expr13> "[" <expr> "]" 
+           | <expr13> "." <expr> 
+           | <expr13> "->" <expr>
            | "(" <type> ")" "{" <list> "}"
-           | <expr24>
+           | <expr14>
 
-<expr24> ::= ["("] <expr> [")"]
+<expr14> ::= ["("] <expr> [")"]
           | <num>
 
 <id> ::= [_]{_a-zA-Z0-9}

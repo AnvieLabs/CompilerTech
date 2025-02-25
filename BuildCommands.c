@@ -1,8 +1,9 @@
 #include "Vidyut/SelfStart.h"
 
 SELF_START ({
+    // Standard library
     ADD_LIBRARY (
-        "ctStd",
+        "misra_std",
         SOURCES (
             "Source/Misra/Std/Log.c",
             "Source/Misra/Std/File.c",
@@ -13,6 +14,19 @@ SELF_START ({
         FLAGS ("-ggdb", "-fPIC")
     );
 
+    // Modern C Library
+    ADD_LIBRARY (
+        "misra_mc",
+        SOURCES ("Source/Misra/Mc/Parser/ASTNodeTypes.c"),
+        LIBRARIES ("misra_std"),
+        FLAGS ("-ggdb", "-fpic")
+    );
+
     // Modern C Compiler
-    ADD_EXECUTABLE ("mcc", SOURCES ("Main.c"), LIBRARIES ("ctStd"), FLAGS ("-ggdb", "-fPIC"));
+    ADD_EXECUTABLE (
+        "mcc",
+        SOURCES ("Main.c"),
+        LIBRARIES ("misra_std", "misra_mc"),
+        FLAGS ("-ggdb", "-fPIC")
+    );
 });
