@@ -41,6 +41,8 @@ the subset of productions generate is a regular language (something that has a r
 
 <whitespace> ::= {" " | "\t" | "\b" | "\r" | "\n" | "\f"}
 
+<ascii_string> ::= """ {*} """
+
 <int> ::= (0-9) 
 <flt> ::= <int> "." [<int>] ["f"]
         | <int>
@@ -52,18 +54,91 @@ the subset of productions generate is a regular language (something that has a r
         | <hex>
         | <bin>
 
-<expr0> ::= <expr1> "+" <expr0>
-          | <expr1> "-" <expr0>
+<expr> ::= <expr0> "," <expr> 
+         | <expr0>
+         | <num>
+         | <id>
+         | <ascii_string> 
+         | "(" <expr> ")"
+
+<expr0> ::= <expr1> "=" <expr1>
+          | <expr1> "+=" <expr1>
+          | <expr1> "-=" <expr1>
+          | <expr1> "*=" <expr1>
+          | <expr1> "/=" <expr1>
+          | <expr1> "%=" <expr1>
+          | <expr1> ">>=" <expr1>
+          | <expr1> "<<=" <expr1>
+          | <expr1> "&=" <expr1>
+          | <expr1> "|=" <expr1>
+          | <expr1> "^=" <expr1>
           | <expr1>
-          
-<expr1> ::= <expr2> "*" <expr1>
-          | <expr2> "/" <expr1>
+
+<expr1> ::= <expr2> "?" <expr1> ":" <expr1>
           | <expr2>
 
-<expr2> ::= ["("] <expr> [")"]
-          | <num>
+<expr2> ::= <expr3> "||" <expr2>
+          | <expr3>
 
-<expr> ::= <expr0>
+<expr3> ::= <expr4> "&&" <expr3>
+          | <expr4>
+
+<expr4> ::= <expr5> "|" <expr4>
+          | <expr5>
+
+<expr5> ::= <expr6> "^" <expr5>
+          | <expr6>
+
+<expr6> ::= <expr7> "&" <expr6>
+          | <expr7>
+
+<expr7> ::= <expr8> "==" <expr7>
+          | <expr8> "!=" <expr7>
+          | <expr8>
+
+<expr8> ::= <expr9> "<" <expr8>
+          | <expr9> ">" <expr8>
+          | <expr9> "<=" <expr8>
+          | <expr9> ">=" <expr8>
+          | <expr9>
+
+<expr9> ::= <expr20> "<<" <expr9>
+          | <expr20> ">>" <expr9>
+          | <expr20>
+
+<expr20> ::= <expr21> "+" <expr20>
+          | <expr21> "-" <expr20>
+          | <expr21>
+          
+<expr21> ::= <expr22> "*" <expr21>
+           | <expr22> "/" <expr21>
+           | <expr22> "%" <expr21>
+           | <expr22>
+
+<expr22> ::= "++" <expr22>
+           | "--" <expr22>
+           | "+" <expr22>
+           | "-" <expr22>
+           | "!" <expr22>
+           | "~" <expr22>
+           | "(" <type> ")"  <expr22>
+           | "*" <expr22>
+           | "&" <expr22>
+           | "sizeof" <expr22>
+           | "_Alignof" <expr22>
+           | <expr23>
+
+<expr23> ::= <expr23> "++" 
+           | <expr23> "--" 
+           | <expr23> "(" <expr> ")" 
+           | <expr23> "[" <expr> "]" 
+           | <expr23> "." <expr> 
+           | <expr23> "->" <expr>
+           | "(" <type> ")" "{" <list> "}"
+           | <expr24>
+
+<expr24> ::= ["("] <expr> [")"]
+          | <num>
 
 <id> ::= [_]{_a-zA-Z0-9}
 
