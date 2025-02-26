@@ -58,11 +58,13 @@ the subset of productions generate is a regular language (something that has a r
 <expr_list> ::= <expr0> "," <expr_list> 
               | <expr0>
 
+<expr_term> ::= <num>
+              | <id>
+              | <ascii_string>
+              | <ascii_char>
+
 <expr> ::= <expr_list> ";"
-         | <num> ";"
-         | <id> ";"
-         | <ascii_string> ";"
-         | <ascii_char> ";"
+         | <expr_term> ";"
 
 <expr0> ::= <expr1> "=" <expr0> # To allow mutliple assignments at the same time
           | <expr1> "+=" <expr1> # Then following this, multiple assignments are disabled
@@ -141,7 +143,7 @@ the subset of productions generate is a regular language (something that has a r
            | <expr14>
 
 <expr14> ::= "(" <expr14> ")" 
-           | <expr>
+           | <expr_term>
 
 <id> ::= [_]{_a-zA-Z0-9}
 
