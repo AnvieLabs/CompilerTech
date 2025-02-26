@@ -1553,7 +1553,7 @@ static inline bool parse_expr_list (McExpr* e, McParser* p) {
                 p->read_pos++;
                 parser_skip_ws (p);
 
-                if (parse_expr (e, p)) {
+                if (parse_expr0 (e, p)) {
                     // make space for one more expression
                     VecResize (&list, e->list.length + 1);
                     VecLast (&list)  = expr_create();
