@@ -55,7 +55,9 @@ the subset of productions generate is a regular language (something that has a r
         | <hex>
         | <bin>
 
-<expr> ::= <expr0>
+<expr_list> ::= <expr0> "," <expr_list> 
+
+<expr> ::= <expr_list>
          | <num>
          | <id>
          | <ascii_string> 
@@ -137,10 +139,8 @@ the subset of productions generate is a regular language (something that has a r
            | "(" <type> ")" "{" <expr_list> "}"
            | <expr14>
 
-<expr14> ::= ["("] <expr> [")"]
-          | <num>
-
-<expr_list> ::= <expr> "," <expr_list> 
+<expr14> ::= "(" <expr14> ")" 
+           | <expr>
 
 <id> ::= [_]{_a-zA-Z0-9}
 
