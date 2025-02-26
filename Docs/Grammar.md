@@ -41,7 +41,8 @@ the subset of productions generate is a regular language (something that has a r
 
 <whitespace> ::= {" " | "\t" | "\b" | "\r" | "\n" | "\f"}
 
-<ascii_string> ::= """ {*} """
+<ascii_string> ::= '"' {*} '"'
+<ascii_char> ::= "'" {*} "'"
 
 <int> ::= (0-9) 
 <flt> ::= <int> "." [<int>] ["f"]
@@ -58,7 +59,7 @@ the subset of productions generate is a regular language (something that has a r
          | <num>
          | <id>
          | <ascii_string> 
-         | "(" <expr> ")"
+         | <ascii_char>
 
 <expr0> ::= <expr1> "=" <expr0> # To allow mutliple assignments at the same time
           | <expr1> "+=" <expr1> # Then following this, multiple assignments are disabled
