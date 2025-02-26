@@ -61,8 +61,8 @@ the subset of productions generate is a regular language (something that has a r
          | <ascii_string> 
          | "(" <expr> ")"
 
-<expr0> ::= <expr1> "=" <expr1>
-          | <expr1> "+=" <expr1>
+<expr0> ::= <expr1> "=" <expr0> # To allow mutliple assignments at the same time
+          | <expr1> "+=" <expr1> # Then following this, multiple assignments are disabled
           | <expr1> "-=" <expr1>
           | <expr1> "*=" <expr1>
           | <expr1> "/=" <expr1>
