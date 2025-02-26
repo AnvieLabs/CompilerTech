@@ -56,6 +56,7 @@ the subset of productions generate is a regular language (something that has a r
         | <bin>
 
 <expr_list> ::= <expr0> "," <expr_list> 
+              | <expr>
 
 <expr> ::= <expr_list>
          | <num>
