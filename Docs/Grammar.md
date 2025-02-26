@@ -130,10 +130,10 @@ the subset of productions generate is a regular language (something that has a r
 
 <expr13> ::= <expr13> "++" 
            | <expr13> "--" 
-           | <expr13> "(" <expr> ")" 
-           | <expr13> "[" <expr> "]" 
-           | <expr13> "." <expr> 
-           | <expr13> "->" <expr>
+           | <expr13> "(" <expr14> ")" 
+           | <expr13> "[" <expr14> "]" 
+           | <expr13> "." <expr14> 
+           | <expr13> "->" <expr14>
            | "(" <type> ")" "{" <list> "}"
            | <expr14>
 
