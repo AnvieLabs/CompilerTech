@@ -11,7 +11,7 @@ SELF_START ({
             "Source/Misra/Std/Container/Str.c"
         ),
         NO_LIBRARIES,
-        FLAGS ("-ggdb", "-fPIC")
+        FLAGS ("-ggdb -fPIC -Og")
     );
 
     // Modern C Library
@@ -19,7 +19,7 @@ SELF_START ({
         "misra_mc",
         SOURCES ("Source/Misra/Mc/Parser/ASTNodeTypes.c"),
         LIBRARIES ("misra_std"),
-        FLAGS ("-ggdb", "-fpic")
+        FLAGS ("-ggdb -fpic -Og")
     );
 
     // Modern C Compiler
@@ -27,6 +27,6 @@ SELF_START ({
         "mcc",
         SOURCES ("Main.c"),
         LIBRARIES ("misra_std", "misra_mc"),
-        FLAGS ("-ggdb", "-fPIC")
+        FLAGS ("-ggdb -fPIC -Og")
     );
 });

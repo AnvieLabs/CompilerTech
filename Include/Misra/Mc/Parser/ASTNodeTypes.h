@@ -118,7 +118,7 @@ typedef enum McExprType {
     MC_EXPR_TYPE_SHR_ASSIGN,
     MC_EXPR_TYPE_SHL_ASSIGN,
     MC_EXPR_TYPE_CALL,
-    MC_EXPR_TYPE_ARR_SUB,
+    MC_EXPR_TYPE_ARR_SUBSCRIPT,
     MC_EXPR_TYPE_ACCESS,
     MC_EXPR_TYPE_PTR_ACCESS,
     MC_EXPR_TYPE_LOG_NOT,
@@ -143,6 +143,8 @@ typedef enum McExprType {
 } McExprType;
 
 typedef struct McExpr McExpr;
+typedef Vec (McExpr*) McExprVec;
+
 struct McExpr {
     McExprType expr_type;
 
@@ -151,7 +153,7 @@ struct McExpr {
             McExpr* l;
             McExpr* r;
         } add, sub, mul, div, and, or, xor, mod, shr, shl, le, ge, lt, gt, eq, ne, log_and, log_or,
-            assign, call, arr_sub, access, ptr_access;
+            assign, call, arr_subscript, access, ptr_access;
 
         struct {
             McExpr* e;
@@ -163,7 +165,7 @@ struct McExpr {
             McExpr* e;
         } cast;
 
-        Vec (McExpr*) list;
+        McExprVec list;
 
         struct {
             McExpr* c;
