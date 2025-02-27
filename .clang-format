@@ -92,7 +92,7 @@ Macros:
   - REALLOCATE(oldptr, type, n) (type*)realloc(oldptr, sizeof(type)*n)
 MaxEmptyLinesToKeep: 4
 PPIndentWidth: 4
-PointerAlignment: Right
+PointerAlignment: Right 
 QualifierAlignment: Leave
 ReferenceAlignment: Right
 ReflowComments: true

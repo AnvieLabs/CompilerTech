@@ -29,4 +29,11 @@ SELF_START ({
         LIBRARIES ("misra_std", "misra_mc"),
         FLAGS ("-ggdb -fPIC -Og")
     );
+    
+    ADD_EXECUTABLE (
+        "expr_test",
+        SOURCES ("Test/Expr.c"),
+        LIBRARIES ("misra_std", "misra_mc"),
+        FLAGS ("-ggdb -fPIC -Og")
+    );
 });

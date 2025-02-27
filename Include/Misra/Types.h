@@ -31,7 +31,10 @@ typedef i8 bool;
 #endif
 
 #ifndef NULL
-#define NULL 0
+#    define NULL 0
 #endif
+
+#define NEW(tname) calloc (1, sizeof (tname))
+#define FREE(x)    (free ((void *)(x)), (x) = NULL)
 
 #endif // MISRA_TYPES_H

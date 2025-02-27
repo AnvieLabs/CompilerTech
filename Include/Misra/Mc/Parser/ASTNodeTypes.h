@@ -67,24 +67,36 @@ typedef struct McParser {
 ///
 /// Deinitialize McParser object after using.
 ///
-/// mcp[out] : Reference to McParser object to be deinitialized.
+/// p[out] : Reference to McParser object to be deinitialized.
 ///
-/// SUCCESS : `mcp`
+/// SUCCESS : `p`
 /// FAILURE : `NULL`
 ///
-McParser* McParserDeinit (McParser* mcp);
+McParser* McParserDeinit (McParser* p);
 
 ///
 /// Initialize a new Modern C Parser object to help read and parse file
 /// with given name `src_name`.
 ///
-/// mcp[out]     : Reference to McParser object to be initialized.
+/// p[out]       : Reference to McParser object to be initialized.
 /// src_name[in] : Name of C source code to load and parse.
 ///
-/// SUCCESS : `mcp`
+/// SUCCESS : `p`
 /// FAILURE : `NULL`
 ///
-McParser* McParserInit (McParser* mcp, const char* src_name);
+McParser* McParserInitFromFile (McParser* p, const char* src_name);
+
+///
+/// Initialize a new Modern C Parser object to help read and parse file
+/// with given name `src_name`.
+///
+/// p[out]   : Reference to McParser object to be initialized.
+/// code[in] : String to parse as code.
+///
+/// SUCCESS : `p`
+/// FAILURE : `NULL`
+///
+McParser* McParserInitFromZStr (McParser* p, const char* code);
 
 typedef enum McExprType {
     MC_EXPR_TYPE_INVALID = 0,
@@ -142,6 +154,18 @@ typedef enum McExprType {
     MC_EXPR_TYPE_MAX
 } McExprType;
 
+///
+/// Try to parse type name from the code string in `p`
+/// object.
+///
+/// expr[out] : AST generated after parsing is successful.
+/// p[in,out] : McParser object containing code to be parsed.
+///
+/// SUCCESS : true, type containing parsed typename, p changed.
+/// FAILURE : false, type unchanged, p unchanged.
+///
+bool McParseType (McType* type, McParser* p);
+
 typedef struct McExpr McExpr;
 typedef Vec (McExpr*) McExprVec;
 
@@ -185,19 +209,61 @@ struct McExpr {
     };
 };
 
+///
+/// Traverse the expression tree recursively and evaluate the value.
+///
+/// expr[in] : Expression tree to be evaluated
+///
+/// RETURN : evaluated value
+///
+f64 McExprEval (McExpr* expr);
+
+///
+/// Initialize an expression tree as root of tree.
+/// 
+/// expr[out] : Expression tree to be initialized.
+///
+/// SUCCESS : expr, initialized expression tree.
+/// FAILURE : NULL
+///
+McExpr* McExprInit(McExpr* expr);
+
+///
+/// De-initialize an expression by traversing the tree
+/// recursively.
+/// 
+/// expr[out] : Expression tree to be de-initialized.
+///
+/// SUCCESS : expr, de-initialized expression tree.
+/// FAILURE : NULL
+///
+McExpr* McExprDeinit(McExpr* expr);
+
+///
+/// Try to parse an expression from the code string in `p`
+/// object.
+///
+/// expr[out] : AST generated after parsing is successful.
+/// p[in,out] : McParser object containing code to be parsed.
+///
+/// SUCCESS : true, expr containing parsed expression, p changed.
+/// FAILURE : false, expr unchanged, p unchanged.
+///
+bool McParseExpr (McExpr* expr, McParser* p);
+
 typedef struct McProgram {
 } McProgram;
 
 ///
-/// Try to parse a program from the code string in `mcp`
+/// Try to parse a program from the code string in `p`
 /// object.
 ///
 /// prog[out]   : AST generated after parsing is successful.
-/// mcp[in,out] : McParser object containing code to be parsed.
+/// p[in,out] : McParser object containing code to be parsed.
 ///
-/// SUCCESS : true, prog containing parsed program, mcp changed.
-/// FAILURE : false, prog unchanged, mcp unchanged.
+/// SUCCESS : true, prog containing parsed program, p changed.
+/// FAILURE : false, prog unchanged, p unchanged.
 ///
-bool McParseProgram (McProgram* prog, McParser* mcp);
+bool McParseProgram (McProgram* prog, McParser* p);
 
 #endif // MISRA_MODERN_C_PARSER_AST_NODE_TYPES_H

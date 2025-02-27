@@ -36,16 +36,10 @@ static inline bool parse_type (McType* t, McParser* p) {
     return false;
 }
 
-
-static inline McExpr* expr_create() {
-    return calloc (1, sizeof (McExpr));
-}
-
-
-static inline void expr_destroy (McExpr* e) {
+McExpr* McExprDeinit (McExpr* e) {
     if (!e) {
         LOG_ERROR ("invalid arguments.");
-        return;
+        return NULL;
     }
 
     switch (e->expr_type) {
@@ -82,10 +76,12 @@ static inline void expr_destroy (McExpr* e) {
         case MC_EXPR_TYPE_ARR_SUBSCRIPT :
         case MC_EXPR_TYPE_ACCESS :
         case MC_EXPR_TYPE_PTR_ACCESS : {
-            expr_destroy (e->add.l);
-            expr_destroy (e->add.r);
+            McExprDeinit (e->add.l);
+            FREE (e->add.l);
+            McExprDeinit (e->add.r);
+            FREE (e->add.r);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
 
 
@@ -102,48 +98,56 @@ static inline void expr_destroy (McExpr* e) {
         case MC_EXPR_TYPE_INC_SFX :
         case MC_EXPR_TYPE_DEC_PFX :
         case MC_EXPR_TYPE_DEC_SFX : {
-            expr_destroy (e->not.e);
+            McExprDeinit (e->not.e);
+            FREE (e->not.e);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
 
         case MC_EXPR_TYPE_CAST : {
-            expr_destroy (e->cast.e);
+            McExprDeinit (e->cast.e);
+            FREE (e->cast.e);
             type_deinit (&e->cast.type);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
 
         case MC_EXPR_TYPE_TERN : {
-            expr_destroy (e->tern.c);
-            expr_destroy (e->tern.t);
-            expr_destroy (e->tern.f);
+            McExprDeinit (e->tern.c);
+            McExprDeinit (e->tern.t);
+            McExprDeinit (e->tern.f);
+            FREE (e->tern.c);
+            FREE (e->tern.t);
+            FREE (e->tern.f);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
         case MC_EXPR_TYPE_LIST : {
-            VecForeach (&e->list, xpr, { expr_destroy (xpr); });
+            VecForeach (&e->list, xpr, {
+                McExprDeinit (xpr);
+                FREE (xpr);
+            });
             VecDeinit (&e->list);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
         case MC_EXPR_TYPE_ID : {
             StrDeinit (&e->id);
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
         case MC_EXPR_TYPE_NUM : {
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
         case MC_EXPR_TYPE_INVALID : {
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
         default : {
             LOG_ERROR ("unreachable code reached : invalid expression type.");
             memset (e, 0, sizeof (McExpr));
-            return;
+            return e;
         }
     }
 }
@@ -268,7 +272,7 @@ static inline bool parser_can_read_n (const McParser* p, i64 n) {
 /// either direction.
 ///
 /// p[in,out] : McParser to move read position into.
-/// n[in]       : Number of bytes (+ve or -ve) to move cursor by.
+/// n[in]     : Number of bytes (+ve or -ve) to move cursor by.
 ///
 /// SUCCESS : p, read position in p moved by n in either direction.
 /// FAILURE : NULL, p unchanged
@@ -292,7 +296,7 @@ static inline McParser* parser_move_by_n (McParser* p, i64 n) {
 /// don't make any changes to read position and return false.
 ///
 /// p[in,out] : McParser object to try reading from.
-/// c[in]       : A character to match to.
+/// c[in]     : A character to match to.
 ///
 /// SUCCESS : true, read position in p is advanced by 1
 /// FAILURE : false, p is unchanged
@@ -319,8 +323,8 @@ bool McParserReadChar (McParser* p, i8 c) {
 /// current read position.
 ///
 /// p[in,out] : McParser object to try reading from.
-/// zs[in]      : A character array to match to.
-/// n[in]       : Size of character array in bytes.
+/// zs[in]    : A character array to match to.
+/// n[in]     : Size of character array in bytes.
 ///
 /// SUCCESS : true, read pos in p is advanced by n
 /// FAILURE : false, p is unchanged
@@ -352,7 +356,7 @@ bool McParserReadCStr (McParser* p, const char* cs, u64 n) {
 /// current read position.
 ///
 /// p[in,out] : McParser object to try reading from.
-/// zs[in]      : Zero-terminated string to match to.
+/// zs[in]    : Zero-terminated string to match to.
 ///
 /// SUCCESS : true, read pos in p is advanced by strlen(zs)
 /// FAILURE : false, p is unchanged
@@ -420,6 +424,12 @@ static inline bool parse_int (u64* si, McParser* p) {
         c = parser_peek (p);
     }
 
+    c = parser_peek (p);
+    if (IS_ALPHA (c) || c == '.') {
+        p->read_pos = start_pos;
+        return false;
+    }
+
     if (start_pos != p->read_pos) {
         *si = val;
         return true;
@@ -438,7 +448,6 @@ static inline bool parse_flt (f64* f, McParser* p) {
     const char* start_pos = p->read_pos;
     parser_skip_ws (p);
 
-
     // parse integer
     f64  val = 0;
     char c   = parser_peek (p);
@@ -449,15 +458,9 @@ static inline bool parse_flt (f64* f, McParser* p) {
         c = parser_peek (p);
     }
 
-    parser_skip_ws (p);
-
-    if (parser_peek (p) != '.') {
-        p->read_pos = start_pos;
-        return false;
+    if (parser_peek (p) == '.') {
+        p->read_pos++;
     }
-
-    p->read_pos++;
-    parser_skip_ws (p);
 
     f64 pow = 10;
     f64 dec = 0;
@@ -470,16 +473,18 @@ static inline bool parse_flt (f64* f, McParser* p) {
         c = parser_peek (p);
     }
 
-    val = val + dec;
-
-    parser_skip_ws (p);
-
     if (parser_peek (p) == 'f') {
         p->read_pos++;
     }
 
+    if (IS_ALPHA (parser_peek (p))) {
+        p->read_pos = start_pos;
+        return false;
+    }
+
     if (start_pos != p->read_pos) {
-        *f = val;
+        val = val + dec;
+        *f  = val;
         return true;
     } else {
         return false;
@@ -561,7 +566,6 @@ static inline bool parse_id (Str* id, McParser* p) {
 }
 
 static inline bool parse_expr_list (McExpr* e, McParser* p);
-static inline bool parse_expr (McExpr* e, McParser* p);
 
 static inline bool parse_expr_term (McExpr* e, McParser* p) {
     if (!e || !p) {
@@ -572,10 +576,10 @@ static inline bool parse_expr_term (McExpr* e, McParser* p) {
     if (parse_id (&e->id, p)) {
         e->expr_type = MC_EXPR_TYPE_ID;
         return true;
-    } else if (!(e->num.is_int = !parse_flt (&e->num.f, p))) {
+    } else if ((e->num.is_int = parse_int (&e->num.i, p))) {
         e->expr_type = MC_EXPR_TYPE_NUM;
         return true;
-    } else if ((e->num.is_int = parse_int (&e->num.i, p))) {
+    } else if (!(e->num.is_int = !parse_flt (&e->num.f, p))) {
         e->expr_type = MC_EXPR_TYPE_NUM;
         return true;
     }
@@ -645,7 +649,7 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
                     p->read_pos++;
                     parser_skip_ws (p);
 
-                    McExpr* xpr = expr_create();
+                    McExpr* xpr = NEW (McExpr);
                     if (parse_expr_list (xpr, p)) {
                         if (parser_peek (p) == '}') {
                             p->read_pos++;
@@ -656,7 +660,8 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
                         }
 
                         p->read_pos = start_pos;
-                        expr_destroy (xpr);
+                        McExprDeinit (xpr);
+                        FREE (xpr);
                         memset (e, 0, sizeof (McExpr));
                         return false;
                     }
@@ -690,7 +695,7 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
         if (et) {
             parser_skip_ws (p);
 
-            McExpr* xpr  = expr_create();
+            McExpr* xpr  = NEW (McExpr);
             *xpr         = *e;
             e->expr_type = et;
             e->inc_pfx.e = xpr;
@@ -711,10 +716,10 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
         if (et) {
             parser_skip_ws (p);
 
-            McExpr* r = expr_create();
+            McExpr* r = NEW (McExpr);
 
             if (parse_expr14 (r, p)) {
-                McExpr* l = expr_create();
+                McExpr* l = NEW (McExpr);
                 *l        = *e;
 
                 e->expr_type = et;
@@ -724,7 +729,8 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
                 return true;
             }
 
-            expr_destroy (r);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -735,12 +741,12 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
             p->read_pos++;
             parser_skip_ws (p);
 
-            McExpr* r = expr_create();
+            McExpr* r = NEW (McExpr);
             if (parse_expr14 (r, p)) {
                 if (parser_peek (p) == ')') {
                     p->read_pos++;
 
-                    McExpr* l = expr_create();
+                    McExpr* l = NEW (McExpr);
                     *l        = *e;
 
                     e->expr_type = MC_EXPR_TYPE_CALL;
@@ -754,19 +760,20 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (r);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         } else if (parser_peek (p) == '[') {
             p->read_pos++;
             parser_skip_ws (p);
 
-            McExpr* r = expr_create();
+            McExpr* r = NEW (McExpr);
             if (parse_expr14 (r, p)) {
                 if (parser_peek (p) == ']') {
                     p->read_pos++;
 
-                    McExpr* l = expr_create();
+                    McExpr* l = NEW (McExpr);
                     *l        = *e;
 
                     e->expr_type       = MC_EXPR_TYPE_ARR_SUBSCRIPT;
@@ -780,7 +787,8 @@ static inline bool parse_expr13 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (r);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -833,7 +841,7 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
     if (et) {
         parser_skip_ws (p);
 
-        McExpr* xpr = expr_create();
+        McExpr* xpr = NEW (McExpr);
 
         e->expr_type = et;
         e->inc_pfx.e = xpr;
@@ -843,7 +851,8 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
         }
 
         p->read_pos = start_pos;
-        expr_destroy (xpr);
+        McExprDeinit (xpr);
+        FREE (xpr);
         memset (e, 0, sizeof (McExpr));
         return false;
     }
@@ -858,7 +867,7 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
                 p->read_pos++;
                 parser_skip_ws (p);
 
-                McExpr* xpr = expr_create();
+                McExpr* xpr = NEW (McExpr);
                 if (parse_expr12 (xpr, p)) {
                     e->expr_type = MC_EXPR_TYPE_CAST;
                     e->cast.e    = xpr;
@@ -866,7 +875,8 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
                 }
 
                 p->read_pos = start_pos;
-                expr_destroy (xpr);
+                McExprDeinit (xpr);
+                FREE (xpr);
                 memset (e, 0, sizeof (McExpr));
                 return false;
             }
@@ -912,8 +922,8 @@ static inline bool parse_expr11 (McExpr* e, McParser* p) {
             p->read_pos++;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = et;
@@ -925,8 +935,10 @@ static inline bool parse_expr11 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -957,10 +969,7 @@ static inline bool parse_expr10 (McExpr* e, McParser* p) {
             // avoid "++" here, pass it down to expr11
             if (parser_peek (p) == '+') {
                 p->read_pos = start_pos;
-                McExpr* xpr = expr_create();
-                *xpr        = *e;
-                expr_destroy (xpr);
-                memset (e, 0, sizeof (McExpr));
+                McExprDeinit (e);
                 return parse_expr11 (e, p);
             } else {
                 et = MC_EXPR_TYPE_ADD;
@@ -971,10 +980,7 @@ static inline bool parse_expr10 (McExpr* e, McParser* p) {
             // avoid "--" here, pass it down to expr11
             if (parser_peek (p) == '-') {
                 p->read_pos = start_pos;
-                McExpr* xpr = expr_create();
-                *xpr        = *e;
-                expr_destroy (xpr);
-                memset (e, 0, sizeof (McExpr));
+                McExprDeinit (e);
                 return parse_expr11 (e, p);
             } else {
                 et = MC_EXPR_TYPE_SUB;
@@ -984,8 +990,8 @@ static inline bool parse_expr10 (McExpr* e, McParser* p) {
         if (et) {
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = et;
@@ -997,8 +1003,10 @@ static inline bool parse_expr10 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1033,8 +1041,8 @@ static inline bool parse_expr9 (McExpr* e, McParser* p) {
             p->read_pos += 2;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = et;
@@ -1046,8 +1054,10 @@ static inline bool parse_expr9 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1088,8 +1098,8 @@ static inline bool parse_expr8 (McExpr* e, McParser* p) {
         parser_skip_ws (p);
 
         if (et) {
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = et;
@@ -1101,8 +1111,10 @@ static inline bool parse_expr8 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1137,8 +1149,8 @@ static inline bool parse_expr7 (McExpr* e, McParser* p) {
             p->read_pos += 2;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = et;
@@ -1150,8 +1162,10 @@ static inline bool parse_expr7 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1179,8 +1193,8 @@ static inline bool parse_expr6 (McExpr* e, McParser* p) {
             p->read_pos += 1;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_AND;
@@ -1192,8 +1206,10 @@ static inline bool parse_expr6 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1221,8 +1237,8 @@ static inline bool parse_expr5 (McExpr* e, McParser* p) {
             p->read_pos += 1;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_XOR;
@@ -1234,8 +1250,10 @@ static inline bool parse_expr5 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1263,8 +1281,8 @@ static inline bool parse_expr4 (McExpr* e, McParser* p) {
             p->read_pos += 1;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_OR;
@@ -1276,8 +1294,10 @@ static inline bool parse_expr4 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1305,8 +1325,8 @@ static inline bool parse_expr3 (McExpr* e, McParser* p) {
             p->read_pos += 2;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_LOG_AND;
@@ -1318,8 +1338,10 @@ static inline bool parse_expr3 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1348,8 +1370,8 @@ static inline bool parse_expr2 (McExpr* e, McParser* p) {
             p->read_pos += 2;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_LOG_OR;
@@ -1361,8 +1383,10 @@ static inline bool parse_expr2 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1391,9 +1415,9 @@ static inline bool parse_expr1 (McExpr* e, McParser* p) {
             p->read_pos++;
             parser_skip_ws (p);
 
-            McExpr* c = expr_create();
-            McExpr* t = expr_create();
-            McExpr* f = expr_create();
+            McExpr* c = NEW (McExpr);
+            McExpr* t = NEW (McExpr);
+            McExpr* f = NEW (McExpr);
 
             // we just realized this expression is a ternary operator expr
             *c           = *e;
@@ -1415,9 +1439,12 @@ static inline bool parse_expr1 (McExpr* e, McParser* p) {
 
                     // we expected an expr1, but didn't get one
                     p->read_pos = start_pos;
-                    expr_destroy (c);
-                    expr_destroy (t);
-                    expr_destroy (f);
+                    McExprDeinit (c);
+                    FREE (c);
+                    McExprDeinit (t);
+                    FREE (t);
+                    McExprDeinit (f);
+                    FREE (f);
                     memset (e, 0, sizeof (McExpr));
                     return false;
                 }
@@ -1427,9 +1454,12 @@ static inline bool parse_expr1 (McExpr* e, McParser* p) {
 
             // we expected an expr1, but didn't get one
             p->read_pos = start_pos;
-            expr_destroy (c);
-            expr_destroy (t);
-            expr_destroy (f);
+            McExprDeinit (c);
+            FREE (c);
+            McExprDeinit (t);
+            FREE (t);
+            McExprDeinit (f);
+            FREE (f);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1460,8 +1490,8 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
             p->read_pos += 1;
             parser_skip_ws (p);
 
-            McExpr* l = expr_create();
-            McExpr* r = expr_create();
+            McExpr* l = NEW (McExpr);
+            McExpr* r = NEW (McExpr);
 
             *l           = *e;
             e->expr_type = MC_EXPR_TYPE_OR;
@@ -1473,8 +1503,10 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
             }
 
             p->read_pos = start_pos;
-            expr_destroy (l);
-            expr_destroy (r);
+            McExprDeinit (l);
+            FREE (l);
+            McExprDeinit (r);
+            FREE (r);
             memset (e, 0, sizeof (McExpr));
             return false;
         }
@@ -1500,7 +1532,7 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
         };
         u64 nopnds = sizeof (opnd_type) / sizeof (opnd_type[0]);
 
-        McExpr* r = expr_create();
+        McExpr* r = NEW (McExpr);
 
         // Go through each operand and create the corresponding
         // expression by parsing another right expression
@@ -1513,7 +1545,7 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
 
                 // Get the right hand expression
                 if (parse_expr1 (r, p)) {
-                    McExpr* l = expr_create();
+                    McExpr* l = NEW (McExpr);
                     *l        = *e;
 
                     e->expr_type = opnd_type[o].expr_type;
@@ -1528,7 +1560,8 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
         // If none of the operands match, then we make
         // a direct pass to expr1, which was already parsed,
         // and now we just need to return as a successful match
-        expr_destroy (r);
+        McExprDeinit (r);
+        FREE (r);
         return true;
     }
 
@@ -1536,7 +1569,7 @@ static inline bool parse_expr0 (McExpr* e, McParser* p) {
 }
 
 
-static inline bool parse_expr (McExpr* e, McParser* p) {
+bool McParseExpr (McExpr* e, McParser* p) {
     if (!e || !p) {
         LOG_ERROR ("invalid arguments.");
         return false;
@@ -1546,8 +1579,6 @@ static inline bool parse_expr (McExpr* e, McParser* p) {
     parser_skip_ws (p);
 
     if (parse_expr_list (e, p)) {
-        return true;
-    } else if (parse_expr_term (e, p)) {
         return true;
     }
     return false;
@@ -1566,7 +1597,7 @@ static inline bool parse_expr_list (McExpr* e, McParser* p) {
         // if we get a comma, then this is actually a list expression
         if (parser_peek (p) == ',') {
             // create a clone of currently parse expr
-            McExpr* xpr = expr_create();
+            McExpr* xpr = NEW (McExpr);
             *xpr        = *e;
 
             // parse complete list first
@@ -1580,7 +1611,7 @@ static inline bool parse_expr_list (McExpr* e, McParser* p) {
                 if (parse_expr0 (e, p)) {
                     // make space for one more expression
                     VecResize (&list, e->list.length + 1);
-                    VecLast (&list)  = expr_create();
+                    VecLast (&list)  = NEW (McExpr);
                     *VecLast (&list) = *e;
                 }
             }
@@ -1596,264 +1627,6 @@ static inline bool parse_expr_list (McExpr* e, McParser* p) {
     return false;
 }
 
-void print_indent (int indent) {
-    for (int i = 0; i < indent; ++i) {
-        printf ("  ");
-    }
-}
-
-void print_expr (McExpr* expr, int indent) {
-    if (expr == NULL) {
-        print_indent (indent);
-        printf ("NULL\n");
-        return;
-    }
-
-    print_indent (indent);
-    switch (expr->expr_type) {
-        case MC_EXPR_TYPE_INVALID :
-            printf ("Invalid Expression\n");
-            break;
-
-        case MC_EXPR_TYPE_ADD :
-            printf ("Add: \n");
-            print_expr (expr->add.l, indent + 1);
-            print_expr (expr->add.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_SUB :
-            printf ("Sub: \n");
-            print_expr (expr->sub.l, indent + 1);
-            print_expr (expr->sub.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_MUL :
-            printf ("Mul: \n");
-            print_expr (expr->mul.l, indent + 1);
-            print_expr (expr->mul.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_DIV :
-            printf ("Div: \n");
-            print_expr (expr->div.l, indent + 1);
-            print_expr (expr->div.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_AND :
-            printf ("And: \n");
-            print_expr (expr->and.l, indent + 1);
-            print_expr (expr->and.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_OR :
-            printf ("Or: \n");
-            print_expr (expr->or.l, indent + 1);
-            print_expr (expr->or.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_XOR :
-            printf ("Xor: \n");
-            print_expr (expr->xor.l, indent + 1);
-            print_expr (expr->xor.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_MOD :
-            printf ("Mod: \n");
-            print_expr (expr->mod.l, indent + 1);
-            print_expr (expr->mod.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_SHR :
-            printf ("Shr: \n");
-            print_expr (expr->shr.l, indent + 1);
-            print_expr (expr->shr.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_SHL :
-            printf ("Shl: \n");
-            print_expr (expr->shl.l, indent + 1);
-            print_expr (expr->shl.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LE :
-            printf ("Le: \n");
-            print_expr (expr->le.l, indent + 1);
-            print_expr (expr->le.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_GE :
-            printf ("Ge: \n");
-            print_expr (expr->ge.l, indent + 1);
-            print_expr (expr->ge.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LT :
-            printf ("Lt: \n");
-            print_expr (expr->lt.l, indent + 1);
-            print_expr (expr->lt.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_GT :
-            printf ("Gt: \n");
-            print_expr (expr->gt.l, indent + 1);
-            print_expr (expr->gt.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_EQ :
-            printf ("Eq: \n");
-            print_expr (expr->eq.l, indent + 1);
-            print_expr (expr->eq.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_NE :
-            printf ("Ne: \n");
-            print_expr (expr->ne.l, indent + 1);
-            print_expr (expr->ne.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LOG_AND :
-            printf ("LogAnd: \n");
-            print_expr (expr->log_and.l, indent + 1);
-            print_expr (expr->log_and.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LOG_OR :
-            printf ("LogOr: \n");
-            print_expr (expr->log_or.l, indent + 1);
-            print_expr (expr->log_or.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ASSIGN :
-            printf ("Assign: \n");
-            print_expr (expr->assign.l, indent + 1);
-            print_expr (expr->assign.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_CALL :
-            printf ("Call: \n");
-            print_expr (expr->call.l, indent + 1);
-            print_expr (expr->call.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ARR_SUBSCRIPT :
-            printf ("Array Subscript: \n");
-            print_expr (expr->arr_subscript.l, indent + 1);
-            print_expr (expr->arr_subscript.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ACCESS :
-            printf ("Access: \n");
-            print_expr (expr->access.l, indent + 1);
-            print_expr (expr->access.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_PTR_ACCESS :
-            printf ("Pointer Access: \n");
-            print_expr (expr->ptr_access.l, indent + 1);
-            print_expr (expr->ptr_access.r, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LOG_NOT :
-            printf ("LogNot: \n");
-            print_expr (expr->log_not.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_NOT :
-            printf ("Not: \n");
-            print_expr (expr->not.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_UN_PLUS :
-            printf ("Unary Plus: \n");
-            print_expr (expr->un_plus.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_UN_MINUS :
-            printf ("Unary Minus: \n");
-            print_expr (expr->un_minus.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_IN_PARENS :
-            printf ("In Parens: \n");
-            print_expr (expr->in_parens.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ADDR :
-            printf ("Address: \n");
-            print_expr (expr->addr.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_DEREF :
-            printf ("Dereference: \n");
-            print_expr (expr->deref.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_SIZE_OF :
-            printf ("SizeOf: \n");
-            print_expr (expr->size_of.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ALIGN_OF :
-            printf ("AlignOf: \n");
-            print_expr (expr->align_of.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_INC_PFX :
-            printf ("Increment Prefix: \n");
-            print_expr (expr->inc_pfx.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_INC_SFX :
-            printf ("Increment Suffix: \n");
-            print_expr (expr->inc_sfx.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_DEC_PFX :
-            printf ("Decrement Prefix: \n");
-            print_expr (expr->dec_pfx.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_DEC_SFX :
-            printf ("Decrement Suffix: \n");
-            print_expr (expr->dec_sfx.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_CAST :
-            printf ("Cast to type : \n");
-            print_expr (expr->cast.e, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_LIST :
-            printf ("List:\n");
-            for (size_t i = 0; i < expr->list.length; ++i) {
-                print_expr (expr->list.data[i], indent + 1);
-            }
-            break;
-
-        case MC_EXPR_TYPE_TERN :
-            printf ("Ternary: \n");
-            print_expr (expr->tern.c, indent + 1);
-            print_expr (expr->tern.t, indent + 1);
-            print_expr (expr->tern.f, indent + 1);
-            break;
-
-        case MC_EXPR_TYPE_ID :
-            printf ("ID: %s\n", expr->id.data);
-            break;
-
-        case MC_EXPR_TYPE_NUM :
-            if (expr->num.is_int) {
-                printf ("Num: %llu\n", expr->num.i);
-            } else {
-                printf ("Num: %f\n", expr->num.f);
-            }
-            break;
-
-        default :
-            printf ("Unknown Expression Type: %d\n", expr->expr_type);
-            break;
-    }
-}
 
 bool McParseProgram (McProgram* prog, McParser* p) {
     if (!prog || !p) {
@@ -1866,20 +1639,18 @@ bool McParseProgram (McProgram* prog, McParser* p) {
 
     while (parser_can_read_n (p, 1)) {
         parser_skip_ws (p);
-        McType  type = {0};
-        McExpr* e    = expr_create();
+        McType type = {0};
+        McExpr e    = {0};
         if (parse_basic_type (&type, p)) {
             parser_skip_ws (p);
             puts ("type");
-        } else if (parse_expr (e, p)) {
+        } else if (McParseExpr (&e, p)) {
             parser_skip_ws (p);
-            print_expr (e, 0);
-            expr_destroy (e);
+            printf ("expr value : %lf\n", McExprEval (&e));
+            McExprDeinit (&e);
         } else {
-            expr_destroy (e);
             break;
         }
-        expr_destroy (e);
     }
 
     if (parser_can_read_n (p, 1)) {
@@ -1903,7 +1674,7 @@ McParser* McParserDeinit (McParser* p) {
 }
 
 
-McParser* McParserInit (McParser* p, const char* src_name) {
+McParser* McParserInitFromFile (McParser* p, const char* src_name) {
     if (!p || !src_name) {
         LOG_ERROR ("invalid arguments.");
         return NULL;
@@ -1920,4 +1691,97 @@ McParser* McParserInit (McParser* p, const char* src_name) {
     p->read_pos = p->code.data;
 
     return p;
+}
+
+
+McParser* McParserInitFromZStr (McParser* p, const char* code) {
+    if (!p || !code) {
+        LOG_ERROR ("invalid arguments.");
+        return NULL;
+    }
+
+    memset (p, 0, sizeof (McParser));
+
+    StrInitFromZStr (&p->code, code);
+    p->read_pos = p->code.data;
+
+    return p;
+}
+
+
+f64 McExprEval (McExpr* expr) {
+    if (!expr)
+        return 0;
+
+    switch (expr->expr_type) {
+        case MC_EXPR_TYPE_ADD :
+            return McExprEval (expr->add.l) + McExprEval (expr->add.r);
+        case MC_EXPR_TYPE_SUB :
+            return McExprEval (expr->sub.l) - McExprEval (expr->sub.r);
+        case MC_EXPR_TYPE_MUL :
+            return McExprEval (expr->mul.l) * McExprEval (expr->mul.r);
+        case MC_EXPR_TYPE_DIV :
+            return McExprEval (expr->div.l) / McExprEval (expr->div.r);
+        case MC_EXPR_TYPE_AND :
+            return (u64)McExprEval (expr->and.l) & (u64)McExprEval (expr->and.r);
+        case MC_EXPR_TYPE_OR :
+            return (u64)McExprEval (expr->or.l) | (u64)McExprEval (expr->or.r);
+        case MC_EXPR_TYPE_XOR :
+            return (u64)McExprEval (expr->xor.l) ^ (u64)McExprEval (expr->xor.r);
+        case MC_EXPR_TYPE_MOD :
+            return (u64)McExprEval (expr->mod.l) % (u64)McExprEval (expr->mod.r);
+        case MC_EXPR_TYPE_SHR :
+            return (u64)McExprEval (expr->shr.l) >> (u64)McExprEval (expr->shr.r);
+        case MC_EXPR_TYPE_SHL :
+            return (u64)McExprEval (expr->shl.l) << (u64)McExprEval (expr->shl.r);
+        case MC_EXPR_TYPE_LE :
+            return McExprEval (expr->le.l) <= McExprEval (expr->le.r);
+        case MC_EXPR_TYPE_GE :
+            return McExprEval (expr->ge.l) >= McExprEval (expr->ge.r);
+        case MC_EXPR_TYPE_LT :
+            return McExprEval (expr->lt.l) < McExprEval (expr->lt.r);
+        case MC_EXPR_TYPE_GT :
+            return McExprEval (expr->gt.l) > McExprEval (expr->gt.r);
+        case MC_EXPR_TYPE_EQ :
+            return McExprEval (expr->eq.l) == McExprEval (expr->eq.r);
+        case MC_EXPR_TYPE_NE :
+            return McExprEval (expr->ne.l) != McExprEval (expr->ne.r);
+        case MC_EXPR_TYPE_LOG_AND :
+            return McExprEval (expr->log_and.l) && McExprEval (expr->log_and.r);
+        case MC_EXPR_TYPE_LOG_OR :
+            return McExprEval (expr->log_or.l) || McExprEval (expr->log_or.r);
+        case MC_EXPR_TYPE_ASSIGN :
+            return 0;
+        case MC_EXPR_TYPE_UN_PLUS :
+            return McExprEval (expr->un_plus.e);
+        case MC_EXPR_TYPE_UN_MINUS :
+            return -McExprEval (expr->un_minus.e);
+        case MC_EXPR_TYPE_LOG_NOT :
+            return !McExprEval (expr->log_not.e);
+        case MC_EXPR_TYPE_NOT :
+            return !(u64)McExprEval (expr->not.e);
+        case MC_EXPR_TYPE_INC_PFX :
+            return McExprEval (expr->inc_pfx.e) + 1;
+        case MC_EXPR_TYPE_INC_SFX :
+            return McExprEval (expr->inc_sfx.e);
+        case MC_EXPR_TYPE_DEC_PFX :
+            return McExprEval (expr->dec_pfx.e) - 1;
+        case MC_EXPR_TYPE_DEC_SFX :
+            return McExprEval (expr->dec_sfx.e);
+        case MC_EXPR_TYPE_NUM :
+            return expr->num.is_int ? (f64)expr->num.i : expr->num.f;
+        case MC_EXPR_TYPE_TERN :
+            return McExprEval (expr->tern.c) ? McExprEval (expr->tern.t) :
+                                               McExprEval (expr->tern.f);
+        case MC_EXPR_TYPE_ID :
+            return 0;
+        case MC_EXPR_TYPE_CAST :
+            return (f64)McExprEval (expr->cast.e);
+        case MC_EXPR_TYPE_IN_PARENS :
+            return McExprEval (expr->in_parens.e);
+        case MC_EXPR_TYPE_LIST :
+            return McExprEval (VecLast (&expr->list));
+        default :
+            return 0;
+    }
 }

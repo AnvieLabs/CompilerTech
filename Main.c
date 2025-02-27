@@ -10,7 +10,7 @@ int main (int argc, char** argv) {
     const char* src_name = argv[1];
 
     McParser parser = {0};
-    if (!McParserInit (&parser, src_name)) {
+    if (!McParserInitFromFile (&parser, src_name)) {
         LOG_ERROR ("failed to init parser.");
         return 1;
     }
