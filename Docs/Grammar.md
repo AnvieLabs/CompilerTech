@@ -47,7 +47,7 @@ the subset of productions generate is a regular language (something that has a r
 <int> ::= (0-9) 
 <flt> ::= <int> "." [<int>] ["f"]
         | <int>
-<hex> ::= (0-9A-Fa-f)
+<hex> ::= "0x" (0-9A-Fa-f)
 <bin> ::= ("0"| "1" | "_") ["b"]
 
 <num> ::= <int> 
