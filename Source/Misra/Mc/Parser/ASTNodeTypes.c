@@ -14,6 +14,8 @@
 #define IS_LOWER(c) ('a' <= (c) && (c) <= 'z')
 #define IS_ALPHA(c) (IS_UPPER (c) || IS_LOWER (c))
 #define IS_ALNUM(c) (IS_ALPHA (c) || IS_DIGIT (c))
+#define TO_LOWER(c) (IS_UPPER (c) ? 'a' + ((c) - 'A') : (c))
+#define TO_UPPER(c) (IS_LOWER (c) ? 'a' + ((c) - 'A') : (c))
 
 static inline McType* type_deinit (McType* t) {
     if (!t) {
@@ -492,6 +494,43 @@ static inline bool parse_flt (f64* f, McParser* p) {
 }
 
 
+static inline bool parse_hex (u64* hx, McParser* p) {
+    if (!hx || !p) {
+        LOG_ERROR ("invalid arguments.");
+        return false;
+    }
+
+    const char* start_pos = p->read_pos;
+    parser_skip_ws (p);
+
+    if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "0x", 2)) {
+        p->read_pos += 2;
+    } else {
+        p->read_pos = start_pos;
+        return false;
+    }
+
+    u64 val = 0;
+
+    char c = parser_peek (p);
+    while (strchr ("0123456789abcdefABCDEF", c)) {
+        c         = TO_LOWER (c);
+        char* hxs = "0123456789abcdef";
+        val       = val * 16 + strchr (hxs, c) - hxs;
+
+        p->read_pos++;
+        c = parser_peek (p);
+    }
+
+    if (start_pos != p->read_pos) {
+        *hx = val;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
 static inline bool parse_basic_type (McType* t, McParser* p) {
     if (!t || !p) {
         LOG_ERROR ("invalid arguments.");
@@ -575,6 +614,9 @@ static inline bool parse_expr_term (McExpr* e, McParser* p) {
 
     if (parse_id (&e->id, p)) {
         e->expr_type = MC_EXPR_TYPE_ID;
+        return true;
+    } else if ((e->num.is_int = parse_hex (&e->num.i, p))) {
+        e->expr_type = MC_EXPR_TYPE_NUM;
         return true;
     } else if ((e->num.is_int = parse_int (&e->num.i, p))) {
         e->expr_type = MC_EXPR_TYPE_NUM;
@@ -1769,7 +1811,7 @@ f64 McExprEval (McExpr* expr) {
         case MC_EXPR_TYPE_DEC_SFX :
             return McExprEval (expr->dec_sfx.e);
         case MC_EXPR_TYPE_NUM :
-            return expr->num.is_int ? (f64)expr->num.i : expr->num.f;
+            return expr->num.is_int ? expr->num.i : expr->num.f;
         case MC_EXPR_TYPE_TERN :
             return McExprEval (expr->tern.c) ? McExprEval (expr->tern.t) :
                                                McExprEval (expr->tern.f);

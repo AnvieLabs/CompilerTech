@@ -41,7 +41,7 @@ u64 ntotal = 0;
         McExpr e = {0};                                                                            \
         McParseExpr (&e, &p);                                                                      \
         f64 v = 0;                                                                                 \
-        if (FCMPEQ ((v = McExprEval (&e)), (xpr))) {                                              \
+        if (FCMPEQ ((v = McExprEval (&e)), (xpr))) {                                               \
             fprintf (                                                                              \
                 stderr,                                                                            \
                 "[FAIL @ LINE %d] : %s (expected NE with %lf, got %lf)\n",                         \
@@ -75,12 +75,12 @@ u64 ntotal = 0;
 
 #define RESULT()                                                                                   \
     if (ntotal == npass)                                                                           \
-        fprintf (stderr, "\nALL PASS!\n");                                                         \
+        fprintf (stderr, "\nALL PASS! TOTAL = %llu\n", ntotal);                                    \
     else                                                                                           \
         fprintf (stderr, "%llu/%llu PASS\n", npass, ntotal)
 
 int main() {
-    TEST_EQ ("100 / 1000.f", 100 / 1000.f);
+
     // digit, number, variable names
     TEST_EQ ("9", 9);
     TEST_EQ (" 10", 10);
@@ -94,8 +94,11 @@ int main() {
     TEST_EQ ("1 - 2", 1 - 2);
     TEST_EQ ("1 / 2", 1 / 2.f);
     TEST_EQ ("100 / 1000.f", 100 / 1000.f);
+    TEST_EQ ("1337.f * 1337.f", 1337.f * 1337.f);
     TEST_EQ ("1 * 2", 1 * 2);
     TEST_EQ ("13 % 5", 13 % 5);
+    TEST_EQ ("0xcafebabe << 4", 0xcafebabeULL << 4);
+    TEST_EQ ("0xbaadb00b << 13", 0xbaadb00bULL << 13);
 
     // show result
     RESULT();
