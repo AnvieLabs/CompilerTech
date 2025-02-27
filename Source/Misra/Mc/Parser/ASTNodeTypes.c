@@ -802,7 +802,15 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
     parser_skip_ws (p);
 
     McExprType et = MC_EXPR_TYPE_INVALID;
-    if (parser_peek (p) == '+') {
+
+    // it's important to try parsing "++" and "--" before "+" or "-"
+    if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "++", 2)) {
+        p->read_pos += 2;
+        et           = MC_EXPR_TYPE_INC_PFX;
+    } else if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "--", 2)) {
+        p->read_pos += 2;
+        et           = MC_EXPR_TYPE_DEC_PFX;
+    } else if (parser_peek (p) == '+') {
         p->read_pos++;
         et = MC_EXPR_TYPE_UN_PLUS;
     } else if (parser_peek (p) == '-') {
@@ -814,12 +822,6 @@ static inline bool parse_expr12 (McExpr* e, McParser* p) {
     } else if (parser_peek (p) == '~') {
         p->read_pos++;
         et = MC_EXPR_TYPE_NOT;
-    } else if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "++", 2)) {
-        p->read_pos += 2;
-        et           = MC_EXPR_TYPE_INC_PFX;
-    } else if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "--", 2)) {
-        p->read_pos += 2;
-        et           = MC_EXPR_TYPE_DEC_PFX;
     } else if (parser_can_read_n (p, 2) && !strncmp (p->read_pos, "sizeof", 6)) {
         p->read_pos += 6;
         et           = MC_EXPR_TYPE_SIZE_OF;
@@ -950,13 +952,36 @@ static inline bool parse_expr10 (McExpr* e, McParser* p) {
 
         McExprType et = MC_EXPR_TYPE_INVALID;
         if (parser_peek (p) == '+') {
-            et = MC_EXPR_TYPE_ADD;
+            p->read_pos++;
+
+            // avoid "++" here, pass it down to expr11
+            if (parser_peek (p) == '+') {
+                p->read_pos = start_pos;
+                McExpr* xpr = expr_create();
+                *xpr        = *e;
+                expr_destroy (xpr);
+                memset (e, 0, sizeof (McExpr));
+                return parse_expr11 (e, p);
+            } else {
+                et = MC_EXPR_TYPE_ADD;
+            }
         } else if (parser_peek (p) == '-') {
-            et = MC_EXPR_TYPE_SUB;
+            p->read_pos++;
+
+            // avoid "--" here, pass it down to expr11
+            if (parser_peek (p) == '-') {
+                p->read_pos = start_pos;
+                McExpr* xpr = expr_create();
+                *xpr        = *e;
+                expr_destroy (xpr);
+                memset (e, 0, sizeof (McExpr));
+                return parse_expr11 (e, p);
+            } else {
+                et = MC_EXPR_TYPE_SUB;
+            }
         }
 
         if (et) {
-            p->read_pos++;
             parser_skip_ws (p);
 
             McExpr* l = expr_create();
