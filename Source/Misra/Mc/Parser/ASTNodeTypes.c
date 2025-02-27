@@ -1379,7 +1379,6 @@ static inline bool parse_expr1 (McExpr* e, McParser* p) {
 
             if (parse_expr1 (t, p)) {
                 parser_skip_ws (p);
-                p->read_pos++;
 
                 if (parser_peek (p) == ':') {
                     p->read_pos++;
@@ -1592,210 +1591,210 @@ void print_expr (McExpr* expr, int indent) {
             break;
 
         case MC_EXPR_TYPE_ADD :
-            printf ("Add: ");
+            printf ("Add: \n");
             print_expr (expr->add.l, indent + 1);
             print_expr (expr->add.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_SUB :
-            printf ("Sub: ");
+            printf ("Sub: \n");
             print_expr (expr->sub.l, indent + 1);
             print_expr (expr->sub.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_MUL :
-            printf ("Mul: ");
+            printf ("Mul: \n");
             print_expr (expr->mul.l, indent + 1);
             print_expr (expr->mul.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_DIV :
-            printf ("Div: ");
+            printf ("Div: \n");
             print_expr (expr->div.l, indent + 1);
             print_expr (expr->div.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_AND :
-            printf ("And: ");
+            printf ("And: \n");
             print_expr (expr->and.l, indent + 1);
             print_expr (expr->and.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_OR :
-            printf ("Or: ");
+            printf ("Or: \n");
             print_expr (expr->or.l, indent + 1);
             print_expr (expr->or.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_XOR :
-            printf ("Xor: ");
+            printf ("Xor: \n");
             print_expr (expr->xor.l, indent + 1);
             print_expr (expr->xor.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_MOD :
-            printf ("Mod: ");
+            printf ("Mod: \n");
             print_expr (expr->mod.l, indent + 1);
             print_expr (expr->mod.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_SHR :
-            printf ("Shr: ");
+            printf ("Shr: \n");
             print_expr (expr->shr.l, indent + 1);
             print_expr (expr->shr.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_SHL :
-            printf ("Shl: ");
+            printf ("Shl: \n");
             print_expr (expr->shl.l, indent + 1);
             print_expr (expr->shl.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_LE :
-            printf ("Le: ");
+            printf ("Le: \n");
             print_expr (expr->le.l, indent + 1);
             print_expr (expr->le.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_GE :
-            printf ("Ge: ");
+            printf ("Ge: \n");
             print_expr (expr->ge.l, indent + 1);
             print_expr (expr->ge.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_LT :
-            printf ("Lt: ");
+            printf ("Lt: \n");
             print_expr (expr->lt.l, indent + 1);
             print_expr (expr->lt.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_GT :
-            printf ("Gt: ");
+            printf ("Gt: \n");
             print_expr (expr->gt.l, indent + 1);
             print_expr (expr->gt.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_EQ :
-            printf ("Eq: ");
+            printf ("Eq: \n");
             print_expr (expr->eq.l, indent + 1);
             print_expr (expr->eq.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_NE :
-            printf ("Ne: ");
+            printf ("Ne: \n");
             print_expr (expr->ne.l, indent + 1);
             print_expr (expr->ne.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_LOG_AND :
-            printf ("LogAnd: ");
+            printf ("LogAnd: \n");
             print_expr (expr->log_and.l, indent + 1);
             print_expr (expr->log_and.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_LOG_OR :
-            printf ("LogOr: ");
+            printf ("LogOr: \n");
             print_expr (expr->log_or.l, indent + 1);
             print_expr (expr->log_or.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ASSIGN :
-            printf ("Assign: ");
+            printf ("Assign: \n");
             print_expr (expr->assign.l, indent + 1);
             print_expr (expr->assign.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_CALL :
-            printf ("Call: ");
+            printf ("Call: \n");
             print_expr (expr->call.l, indent + 1);
             print_expr (expr->call.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ARR_SUBSCRIPT :
-            printf ("Array Subscript: ");
+            printf ("Array Subscript: \n");
             print_expr (expr->arr_subscript.l, indent + 1);
             print_expr (expr->arr_subscript.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ACCESS :
-            printf ("Access: ");
+            printf ("Access: \n");
             print_expr (expr->access.l, indent + 1);
             print_expr (expr->access.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_PTR_ACCESS :
-            printf ("Pointer Access: ");
+            printf ("Pointer Access: \n");
             print_expr (expr->ptr_access.l, indent + 1);
             print_expr (expr->ptr_access.r, indent + 1);
             break;
 
         case MC_EXPR_TYPE_LOG_NOT :
-            printf ("LogNot: ");
+            printf ("LogNot: \n");
             print_expr (expr->log_not.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_NOT :
-            printf ("Not: ");
+            printf ("Not: \n");
             print_expr (expr->not.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_UN_PLUS :
-            printf ("Unary Plus: ");
+            printf ("Unary Plus: \n");
             print_expr (expr->un_plus.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_UN_MINUS :
-            printf ("Unary Minus: ");
+            printf ("Unary Minus: \n");
             print_expr (expr->un_minus.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_IN_PARENS :
-            printf ("In Parens: ");
+            printf ("In Parens: \n");
             print_expr (expr->in_parens.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ADDR :
-            printf ("Address: ");
+            printf ("Address: \n");
             print_expr (expr->addr.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_DEREF :
-            printf ("Dereference: ");
+            printf ("Dereference: \n");
             print_expr (expr->deref.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_SIZE_OF :
-            printf ("SizeOf: ");
+            printf ("SizeOf: \n");
             print_expr (expr->size_of.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ALIGN_OF :
-            printf ("AlignOf: ");
+            printf ("AlignOf: \n");
             print_expr (expr->align_of.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_INC_PFX :
-            printf ("Increment Prefix: ");
+            printf ("Increment Prefix: \n");
             print_expr (expr->inc_pfx.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_INC_SFX :
-            printf ("Increment Suffix: ");
+            printf ("Increment Suffix: \n");
             print_expr (expr->inc_sfx.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_DEC_PFX :
-            printf ("Decrement Prefix: ");
+            printf ("Decrement Prefix: \n");
             print_expr (expr->dec_pfx.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_DEC_SFX :
-            printf ("Decrement Suffix: ");
+            printf ("Decrement Suffix: \n");
             print_expr (expr->dec_sfx.e, indent + 1);
             break;
 
         case MC_EXPR_TYPE_CAST :
-            printf ("Cast to type : ");
+            printf ("Cast to type : \n");
             print_expr (expr->cast.e, indent + 1);
             break;
 
@@ -1807,14 +1806,14 @@ void print_expr (McExpr* expr, int indent) {
             break;
 
         case MC_EXPR_TYPE_TERN :
-            printf ("Ternary: ");
+            printf ("Ternary: \n");
             print_expr (expr->tern.c, indent + 1);
             print_expr (expr->tern.t, indent + 1);
             print_expr (expr->tern.f, indent + 1);
             break;
 
         case MC_EXPR_TYPE_ID :
-            printf ("ID: %s\n", expr->id);
+            printf ("ID: %s\n", expr->id.data);
             break;
 
         case MC_EXPR_TYPE_NUM :
